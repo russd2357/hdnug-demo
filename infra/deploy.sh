@@ -205,6 +205,14 @@ if [ $? -ne 0 ]; then
 fi
 echo "Karpenter node pool created successfully"
 
+# Create a namespace for the application
+kubectl create namespace $app_ns
+if [ $? -ne 0 ]; then
+    echo "Failed to create namespace $app_ns"
+    exit 1
+fi
+echo "Namespace $app_ns created successfully"
+
 # Create a workload identity
 workload_identity_name="uami-workload-identity-${local_name}-${suffix}"
 workload_identity_json=$(az aks workload identity create \
@@ -220,4 +228,68 @@ echo "Workload identity created successfully"
 workload_identity_resource_id=$(echo $workload_identity_json | jq -r '.id')
 workload_identity_client_id=$(echo $workload_identity_json | jq -r '.clientId')
 workload_identity_object_id=$(echo $workload_identity_json | jq -r '.principalId')
+
+# Create a service account for the workload identity
+kubectl create serviceaccount demo-app-service-account \
+--namespace $app_ns \
+
+if [ $? -ne 0 ]; then
+    echo "Failed to create service account"
+    exit 1
+fi
+echo "Service account created successfully"
+
+# Annotate the service account to associate it with the workload identity
+kubectl annotate serviceaccount \
+--namespace $app_ns \
+demo-app-service-account \
+"azure.workload.identity/client-id=${workload_identity_client_id}" \
+
+if [ $? -ne 0 ]; then
+    echo "Failed to annotate service account"
+    exit 1
+fi
+echo "Service account annotated successfully"
+
+# Retrive the OIDC issurer URL
+oidc_issuer_url=$(az aks show --name ${aks_name} \
+--resource-group "${resource_group_name}" \
+--query "oidcIssuerProfile.issuerUrl" \
+-o tsv)
+
+# Create a Federated Identity Credential
+fic_name="fic-${local_name}-${suffix}"
+
+az identity federated-credential create \
+--name $fic_name \
+--identity-name $workload_identity_name \
+--resource-group $resource_group_name \
+--issuer $oidc_issuer_url \
+--subject "system:serviceaccount:${app_ns}:demo-app-service-account"
+
+if [ $? -ne 0 ]; then
+    echo "Failed to create Federated Identity Credential"
+    exit 1
+fi
+echo "Federated Identity Credential created successfully"
+
+# Create a second Federated Identity Credential for the KEDA service account
+keda_fic_name="fic-keda-${local_name}-${suffix}"
+az identity federated-credential create \
+--name ${keda_fic_name} \
+--identity-name ${workload_identity_name} \
+--resource-group "${resource_group_name}" \
+--issuer ${oidc_issuer_url} \
+--subject system:serviceaccount:kube-system:keda-operator
+
+if [ $? -ne 0 ]; then
+    echo "Failed to create Federated Identity Credential for KEDA"
+    exit 1
+fi
+echo "Federated Identity Credential for KEDA created successfully"
+
+echo "Deployment script completed successfully"
+
+exit 0
+# End of script
 
