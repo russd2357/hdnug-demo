@@ -144,7 +144,7 @@ echo "AKS credentials retrieved successfully"
 
 # Create a Karpenter node pool
 defaultNodePoolApiVersion=$(kubectl get nodepools -o=jsonpath='{.items[?(@.metadata.name=="default")].apiVersion}')
-if [ -z  $defaultNodePoolApiVersion]; then
+if [ -z  $defaultNodePoolApiVersion ]; then
 echo -e "Creating default node pool..." 
 
 # Now create the app [Karpenter] node pool
@@ -215,7 +215,7 @@ echo "Namespace $app_ns created successfully"
 
 # Create a workload identity
 workload_identity_name="uami-workload-identity-${local_name}-${suffix}"
-workload_identity_json=$(az aks workload identity create \
+workload_identity_json=$(az identity create \
 --name $workload_identity_name \
 --resource-group $resource_group_name \
 --output json)
