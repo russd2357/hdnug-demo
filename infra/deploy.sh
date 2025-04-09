@@ -57,9 +57,8 @@ uami_client_id=$(echo $uami_json | jq -r '.clientId')
 az role assignment create \
 --assignee-object-id $uami_object_id \
 --assignee-principal-type ServicePrincipal \
---role AcrPull \
+--role acrpull \
 --scope $acr_id
---output none
 
 if [ $? -ne 0 ]; then
     echo "Failed to assign AcrPull role to the managed identity"
@@ -95,6 +94,7 @@ az aks create \
 --attach-acr ${acr_name} \
 --enable-addons monitoring \
 --kubernetes-version "$k8sversion" \
+--output none
 
 if [ $? -ne 0 ]; then
     echo "Failed to create AKS cluster"
