@@ -1,0 +1,6 @@
+.vscode/
+
+app/Consumer/bin/
+app/Consumer/obj/
+app/Publisher/bin/
+app/Publisher/obj/
