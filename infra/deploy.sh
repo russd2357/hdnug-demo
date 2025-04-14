@@ -9,7 +9,7 @@ tags="owner=houdemo"
 location="westus3"
 resource_group_name="rg-${local_name}-${suffix}"
 node_count=3
-app_ns="houdemo"
+app_ns="houdemo"    # Namespace for the application
 
 # Create a resource group
 az group create \
@@ -287,6 +287,14 @@ if [ $? -ne 0 ]; then
     exit 1
 fi
 echo "Federated Identity Credential for KEDA created successfully"
+
+# Deploy RabbitMQ on the AKS cluster
+kubectl apply --namespace $app_ns -f ./deploy-rabbitmq.yaml 
+if [ $? -ne 0 ]; then
+    echo "Failed to deploy RabbitMQ"
+    exit 1
+fi
+echo "RabbitMQ deployed successfully"
 
 echo "Deployment script completed successfully"
 
