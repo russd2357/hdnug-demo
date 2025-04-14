@@ -1,0 +1,44 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rabbitmq-deployment
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: rabbitmq-consumer
+  template:
+    metadata:
+      labels:
+        app: rabbitmq-consumer
+    spec:
+      #serviceAccountName: $SERVICE_ACCOUNT
+      containers:
+      - name: keda-queue-reader
+        image: acrhoudemo3h807f.azurecr.io/houdemo/rabbitmq-consumer
+        imagePullPolicy: Always
+        env:
+        - name: RABBITMQ_HOSTNAME
+          value: rabbitmq.houdemo.svc.cluster.local
+        - name: RABBITMQ_USERNAME
+          valueFrom:
+            secretKeyRef:
+              key: username
+              name: rabbitcreds
+        - name: RABBITMQ_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              key: password
+              name: rabbitcreds
+        resources:
+          requests:
+            memory: "64Mi"
+            cpu: "250m"
+          limits:
+            memory: "128Mi"
+            cpu: "500m"
+      tolerations:
+      - key: deployment
+        operator: Equal
+        value: default
+        effect: NoSchedule
